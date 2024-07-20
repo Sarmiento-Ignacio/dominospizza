@@ -1,0 +1,17 @@
+---
+import MainLayout from "../layout/main-layout.astro";
+import LoginForm from "../components/login-form";
+---
+
+<MainLayout title="Log in" description="Log in">
+  <div class="flex items-center justify-center flex-col">
+    <h1 class="text-3xl font-bold">Log in</h1>
+
+   
+
+  <LoginForm client:load />
+    <p class="text-center my-5">
+      Don't have an account? <a href="/signup" class="text-blue-700">Sign up</a>
+    </p>
+  </div>
+</MainLayout>

@@ -1,0 +1,15 @@
+---
+import MainLayout from "../layout/main-layout.astro";
+import Sidebar from "../components/sidebar.astro";
+
+const userIsLoggedIn = !!Astro.locals.userId;
+
+if (!userIsLoggedIn) {
+  return Astro.redirect("/login");
+}
+
+---
+
+<MainLayout title="Dashboard" description="dashboard page">
+  
+</MainLayout>

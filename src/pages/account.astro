@@ -1,0 +1,118 @@
+---
+import { eq, desc } from "drizzle-orm";
+
+import { db } from "../db";
+import MainLayout from "../layout/main-layout.astro";
+import { loginLogs, sessions } from "../db/schema";
+
+const sessionToken = Astro.cookies.get("app_auth_token")?.value;
+
+if (!sessionToken) {
+  return Astro.redirect("/");
+}
+const userInfo = await db.query.sessions.findFirst({
+  where: eq(sessions.id, sessionToken),
+  with: {
+    user: {
+      with: {
+        loginLogs: {
+          orderBy: desc(loginLogs.loggedInAt),
+        },
+      },
+    },
+  },
+});
+
+const logs = userInfo?.user?.loginLogs.sort((a, b) =>
+  a.sessionId === sessionToken ? -1 : 1
+);
+
+function capitalizeFirstWord(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+---
+
+<MainLayout title="Account Page" description="Account Page">
+  <div class="p-4 sm:ml-64">
+    <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
+     
+        <div>
+          <h1 class="my-10 text-3xl font-bold text-center">Manage Account</h1>
+
+          <div class="flex flex-col gap-3 md:flex-row items-center">
+            <h2 class="text-xl my-3 font-semibold">Email:</h2>
+            <input
+              type="text"
+              class="border-2 border-slate-400 rounded-md px-2 py-1 w-fit"
+              name="email"
+              placeholder="Email"
+              value={userInfo?.user?.email}
+              id="email"
+              readonly
+            />
+          </div>
+
+          <a
+            href="/profile"
+            class="border-2 border-fuchsia-600 mt-5 block w-fit rounded-full px-5 py-2"
+            >Edit Profile</a
+          >
+
+          <div class="my-5">
+            <h2 class="text-xl my-3 font-semibold">Log in logs</h2>
+
+            <div class="flex flex-col gap-5">
+              {
+                logs?.map((log) => (
+                  <div class="flex flex-col lg:flex-row justify-between items-center bg-slate-100 shadow-md rounded-md px-3 py-2">
+                    <div class="flex text-center flex-wrap justify-center items-center gap-2">
+                      {sessionToken === log.sessionId && (
+                        <div class="bg-fuchsia-600 rounded-full text-white px-2 py-1 text-sm ">
+                          This Device
+                        </div>
+                      )}
+                      {capitalizeFirstWord(log.os)}
+                      {capitalizeFirstWord(log.device)}
+                      {capitalizeFirstWord(log.browser)}
+                    </div>
+                    <div class="flex md:gap-5 gap-3 w-full lg:w-auto mt-2 flex-col md:flex-row flex-wrap">
+                      <div>IP: {log.ip}</div>
+                      <div>
+                        Logged in at:
+                        {new Intl.DateTimeFormat("en-US").format(
+                          new Date(log.loggedInAt!)
+                        )}
+                      </div>
+                      {sessionToken !== log.sessionId && (
+                        <button
+                          data-sid={log.sessionId}
+                          class="revoke-access text-red-500"
+                        >
+                          Revoke Access
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const revokeAccessBtns = document.querySelectorAll(".revoke-access");
+
+    revokeAccessBtns.forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        await fetch("/api/auth/revoke-access", {
+          method: "POST",
+          body: JSON.stringify({ sessionId: btn.getAttribute("data-sid") }),
+        });
+        window.location.reload();
+      });
+    });
+  </script>
+</MainLayout>
